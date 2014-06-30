@@ -1,8 +1,8 @@
 package shade
 
 import (
-  "github.com/kisielk/raven-go/raven"
 	"github.com/go-martini/martini"
+	"github.com/kisielk/raven-go/raven"
 )
 
 func Middleware(dsn string) martini.Handler {
@@ -10,11 +10,14 @@ func Middleware(dsn string) martini.Handler {
 		panic("Error: No DSN detected!\n")
 	}
 	client, _ := raven.NewClient(dsn)
-	
+
 	return func(context martini.Context) {
 		defer func() {
 			if err := recover(); err != nil {
-				client.CaptureMessage(err.Error())
+				const size = 1 << 12
+				buf := make([]byte, size)
+				n := runtime.Stack(buf, false)
+				client.CaptureMessage(err, string(buf[:n]))
 			}
 		}()
 		context.Next()
